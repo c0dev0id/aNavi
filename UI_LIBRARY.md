@@ -11,13 +11,13 @@ no AppCompat. Consistent rendering across OEMs.
 - Glove-friendly: large touch targets (min 56dp)
 - Glanceable: high contrast, monospace, readable at speed
 - Canvas-drawn: no inflation, no theme interference
-- Composable: components combine — `Button + Menu`, `Ring + Menu`, etc.
+- Composable: components combine — `IconButton + Menu`, `Ring + Menu`, etc.
 
 ---
 
 ## Components
 
-### Button
+### IconButton
 
 A square icon on screen. The atomic control element.
 
@@ -33,11 +33,11 @@ A square icon on screen. The atomic control element.
 - Press feedback (scale or alpha)
 
 **Used as:**
-- Menu trigger (hamburger, A icon) — `Button + Menu`
-- Toggle (camera lock) — `Button` alone with on/off state
-- Spoke item — `Button` inside a `Spoke`
+- Menu trigger (hamburger, A icon) — `IconButton + Menu`
+- Toggle (camera lock) — `IconButton` alone with on/off state
+- Spoke item — `IconButton` inside a `Spoke`
 
-All Buttons share identical rendering, animation, and sizing. Only icon
+All IconButtons share identical rendering, animation, and sizing. Only icon
 and position differ.
 
 ---
@@ -60,16 +60,23 @@ component — defines all content structure and interaction.
 - `expandH` — horizontal expansion direction (left / right)
 - `expandV` — vertical expansion direction (up / down)
 - `anchor` — the View or point it attaches to
+- `title` — header title text
 - `items` — list of menu entries:
   - `label`, `icon` (optional), `enabled`, `action`
+  - Toggle variant: `checked` state (true/false) shown as checkmark
   - `submenu` — nested item list (opens a child Menu)
+
+**Header:**
+Split layout — title on one side, optional action icons on the other.
+The context menu uses action icons (copy coordinate, quick search).
+All other menus use a single-split header (title only).
+
+**Scroll:** If items exceed visible area, vertical scroll within the Menu
+frame. No paging.
 
 **Submenu behavior:** TBD — needs first ride to decide between push,
 replace-in-place, or inline expand. Spec will be updated after real-world
 testing with gloves.
-
-**Scroll:** If items exceed visible area, vertical scroll within the Menu
-frame. No paging.
 
 ---
 
@@ -90,13 +97,13 @@ A radial fill indicator for long-press activation on the map surface.
 **Used as:**
 - `Ring + Menu` — long-press context menu on the map
 
-Not reused with Button (different trigger model — hold vs tap).
+Not reused with IconButton (different trigger model — hold vs tap).
 
 ---
 
 ### Spoke
 
-A row of Buttons that fly out from a center point in one direction.
+A row of IconButtons that fly out from a center point in one direction.
 
 **Behavior:**
 - Triggered by parent (e.g. SearchRing tap)
@@ -107,7 +114,7 @@ A row of Buttons that fly out from a center point in one direction.
 
 **Properties:**
 - `direction` — angle or cardinal direction to expand toward
-- `items` — ordered list of Buttons to fly out
+- `items` — ordered list of IconButtons to fly out
 - `spacing` — gap between items
 
 **Used as:**
@@ -123,12 +130,47 @@ persistent control.
 **Behavior:**
 - Tap → Spokes extend outward
 - Tap again or tap outside → Spokes retract
-- Visual: circular icon button (distinct from Button in shape — round
+- Visual: circular icon button (distinct from IconButton in shape — round
   vs square), but shares sizing and press feedback
 
 **Properties:**
 - `icon` — search icon or other indicator
 - `position` — typically bottom-center
+
+---
+
+### Crosshair
+
+Screen-center marker for precision targeting when panning the map.
+
+**Behavior:**
+- Always at screen center
+- Alpha-fades to invisible when close to the GPS location puck
+  (effectively invisible in camera-lock mode, visible when panning)
+- Fade threshold: distance in screen pixels between center and puck
+
+**Visual:**
+- Four short lines radiating from center with a gap (cross pattern)
+- Thin stroke, high contrast against map
+
+**Properties:**
+- `fadeDistance` — screen-pixel distance at which alpha reaches 1.0
+- `strokeWidth` — line thickness
+- `size` — overall cross extent
+
+---
+
+### UpdaterCard
+
+Small persistent card showing version and build info.
+
+**Visual:**
+- Compact rounded rect with semi-transparent dark background
+- Small monospace text showing version string
+- Positioned bottom-right, above the app launcher button
+
+**Properties:**
+- `text` — version/build string to display
 
 ---
 
@@ -138,12 +180,28 @@ Components combine to define complete UI elements. Behavior comes from
 the component, placement is separate.
 
 ```
-Button(icon: ≡)         + Menu(right, down)           → navigation menu
-Button(icon: A)         + Menu(left, up)               → app menu
-Button(icon: location)                                 → camera toggle
+IconButton(icon: ≡)     + Menu(right, down)           → navigation menu
+IconButton(icon: A)     + Menu(left, up)               → app menu
+IconButton(icon: loc)                                  → camera toggle
 Ring                    + Menu(right, down)             → map context menu
+                          header: "Navigate" + [📋, 🔍]
+                          items: Navigate, Place drag line
 SearchRing              + Spoke(left) + Spoke(right)   → search bar
 ```
+
+### Menu Content
+
+**Navigation menu** (hamburger, top-left):
+- Open GPX, Export GPX, Save Location, Favorites, Import POIs, Clear Track
+- POI search items enabled only when track is loaded
+
+**Context menu** (long-press on map):
+- Header: "Navigate" + action icons (copy coordinates, quick search)
+- Items: Navigate, Place drag line
+
+**App launcher menu** (A icon, bottom-right):
+- Items: list of launchable apps
+- "Add app" item → submenu of available apps
 
 ## Placement
 
@@ -156,18 +214,21 @@ change behavior — components bring their full behavior set.
 │  └─ Menu(→↓)                         │
 │                                      │
 │                                      │
+│               ╋                      │  ╋ = Crosshair (fades near puck)
 │            (long press)              │
 │             ◎ → Menu(→↓)             │
 │                                      │
-│                                      │
 │      ←Spoke─[🔍]─Spoke→             │
+│                         [build]      │  build = UpdaterCard
 │                              [A]     │
 │                         Menu(←↑) ─┘  │
 └──────────────────────────────────────┘
 
-≡    = Button (hamburger)     top-left
-loc  = Button (camera lock)   top-right
-◎    = Ring                   at touch point
-🔍   = SearchRing             bottom-center
-A    = Button (app menu)      bottom-right
+≡    = IconButton (hamburger)     top-left
+loc  = IconButton (camera lock)   top-right
+╋    = Crosshair                  screen center
+◎    = Ring                       at touch point
+🔍   = SearchRing                 bottom-center
+build= UpdaterCard                bottom-right
+A    = IconButton (app menu)      bottom-right
 ```
