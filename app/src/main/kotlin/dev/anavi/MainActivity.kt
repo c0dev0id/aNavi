@@ -24,6 +24,7 @@ import android.widget.Toast
 import dev.anavi.ui.Crosshair
 import dev.anavi.ui.IconButton
 import dev.anavi.ui.MenuItem
+import dev.anavi.ui.Ring
 import dev.anavi.ui.UiMetrics
 import dev.anavi.db.FavoriteLocation
 import dev.anavi.db.FavoritesDb
@@ -71,6 +72,7 @@ class MainActivity : Activity(), LocationListener {
     private var poiOverlay: PoiOverlay? = null
     private var activeMenu: Menu? = null
     private lateinit var crosshair: Crosshair
+    private lateinit var ring: Ring
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -115,6 +117,15 @@ class MainActivity : Activity(), LocationListener {
             ).apply { setMargins(margin, margin, margin, margin) }
         }
         root.addView(cameraToggle)
+
+        ring = Ring(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            onComplete = { x, y -> showContextMenu(x, y) }
+        }
+        root.addView(ring)
 
         crosshair = Crosshair(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -198,6 +209,45 @@ class MainActivity : Activity(), LocationListener {
             expandV = ExpandV.DOWN,
             title = getString(R.string.app_name),
             items = items,
+            onDismiss = { activeMenu = null }
+        )
+    }
+
+    private fun showContextMenu(x: Float, y: Float) {
+        activeMenu?.dismiss()
+
+        val m = map ?: return
+        val latLng = m.projection.fromScreenLocation(
+            android.graphics.PointF(x, y)
+        )
+        val coordStr = String.format(Locale.ROOT, "%.5f, %.5f", latLng.latitude, latLng.longitude)
+
+        val items = listOf(
+            MenuItem("Navigate") {
+                Toast.makeText(this, "Navigate to $coordStr", Toast.LENGTH_SHORT).show()
+            },
+            MenuItem("Place drag line") {
+                Toast.makeText(this, "Drag line at $coordStr", Toast.LENGTH_SHORT).show()
+            }
+        )
+
+        val menu = Menu(this)
+        activeMenu = menu
+        menu.showAt(
+            parent = mapView.parent as FrameLayout,
+            x = x,
+            y = y,
+            expandH = ExpandH.RIGHT,
+            expandV = ExpandV.DOWN,
+            title = "Navigate",
+            items = items,
+            headerActions = listOf(
+                MenuItem("Copy", icon = getDrawable(android.R.drawable.ic_menu_edit)) {
+                    val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("coordinates", coordStr))
+                    Toast.makeText(this, "Copied $coordStr", Toast.LENGTH_SHORT).show()
+                }
+            ),
             onDismiss = { activeMenu = null }
         )
     }

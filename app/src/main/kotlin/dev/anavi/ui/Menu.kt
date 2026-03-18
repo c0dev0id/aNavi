@@ -90,6 +90,30 @@ class Menu(context: Context) : View(context) {
         headerActions: List<MenuItem> = emptyList(),
         onDismiss: (() -> Unit)? = null
     ) {
+        val loc = IntArray(2)
+        anchor.getLocationInWindow(loc)
+        val ax = when (expandH) {
+            ExpandH.RIGHT -> loc[0].toFloat()
+            ExpandH.LEFT -> (loc[0] + anchor.width).toFloat()
+        }
+        val ay = when (expandV) {
+            ExpandV.DOWN -> (loc[1] + anchor.height).toFloat()
+            ExpandV.UP -> loc[1].toFloat()
+        }
+        showAt(parent, ax, ay, expandH, expandV, title, items, headerActions, onDismiss)
+    }
+
+    fun showAt(
+        parent: FrameLayout,
+        x: Float,
+        y: Float,
+        expandH: ExpandH,
+        expandV: ExpandV,
+        title: String,
+        items: List<MenuItem>,
+        headerActions: List<MenuItem> = emptyList(),
+        onDismiss: (() -> Unit)? = null
+    ) {
         this.title = title
         this.items = items
         this.headerActions = headerActions
@@ -97,17 +121,8 @@ class Menu(context: Context) : View(context) {
         this.expandV = expandV
         this.onDismiss = onDismiss
         dismissed = false
-
-        val loc = IntArray(2)
-        anchor.getLocationInWindow(loc)
-        anchorX = when (expandH) {
-            ExpandH.RIGHT -> loc[0].toFloat()
-            ExpandH.LEFT -> (loc[0] + anchor.width).toFloat()
-        }
-        anchorY = when (expandV) {
-            ExpandV.DOWN -> (loc[1] + anchor.height).toFloat()
-            ExpandV.UP -> loc[1].toFloat()
-        }
+        anchorX = x
+        anchorY = y
 
         layoutParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
