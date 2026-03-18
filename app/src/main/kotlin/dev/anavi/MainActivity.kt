@@ -23,8 +23,13 @@ import dev.anavi.db.FavoritesDb
 import dev.anavi.gpx.GpxData
 import dev.anavi.gpx.GpxParser
 import dev.anavi.gpx.GpxWriter
+import dev.anavi.map.PoiOverlay
 import dev.anavi.map.TrackOverlay
 import dev.anavi.nav.TrackFollower
+import dev.anavi.poi.PoiCategory
+import dev.anavi.poi.PoiDb
+import dev.anavi.poi.PoiImporter
+import dev.anavi.poi.PoiSearch
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -54,12 +59,15 @@ class MainActivity : Activity(), LocationListener {
     private var trackFollower: TrackFollower? = null
 
     private lateinit var favoritesDb: FavoritesDb
+    private lateinit var poiDb: PoiDb
+    private var poiOverlay: PoiOverlay? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         favoritesDb = FavoritesDb(this)
+        poiDb = PoiDb(this)
 
         speedText = findViewById(R.id.speedText)
         distanceText = findViewById(R.id.distanceText)
@@ -88,6 +96,7 @@ class MainActivity : Activity(), LocationListener {
             }
             mlMap.setStyle(styleUrl) {
                 trackOverlay = TrackOverlay(mlMap)
+                poiOverlay = PoiOverlay(mlMap)
                 activeGpx?.let { showTrack(it) }
             }
             mlMap.cameraPosition = CameraPosition.Builder()
@@ -127,14 +136,22 @@ class MainActivity : Activity(), LocationListener {
     private fun showMenu(anchor: View) {
         val popup = PopupMenu(this, anchor)
         popup.menuInflater.inflate(R.menu.main_menu, popup.menu)
-        popup.menu.findItem(R.id.menu_save_gpx)?.isEnabled = activeGpx != null
-        popup.menu.findItem(R.id.menu_clear_track)?.isEnabled = activeGpx != null
+        val hasTrack = activeGpx != null
+        popup.menu.findItem(R.id.menu_save_gpx)?.isEnabled = hasTrack
+        popup.menu.findItem(R.id.menu_clear_track)?.isEnabled = hasTrack
+        popup.menu.findItem(R.id.menu_find_fuel)?.isEnabled = hasTrack
+        popup.menu.findItem(R.id.menu_find_food)?.isEnabled = hasTrack
+        popup.menu.findItem(R.id.menu_find_lodging)?.isEnabled = hasTrack
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.menu_open_gpx -> { openGpxPicker(); true }
                 R.id.menu_save_gpx -> { saveGpxPicker(); true }
+                R.id.menu_find_fuel -> { findPoisOnRoute(PoiCategory.FUEL); true }
+                R.id.menu_find_food -> { findPoisOnRoute(PoiCategory.FOOD); true }
+                R.id.menu_find_lodging -> { findPoisOnRoute(PoiCategory.LODGING); true }
                 R.id.menu_save_location -> { showSaveLocationDialog(); true }
                 R.id.menu_favorites -> { showFavoritesList(); true }
+                R.id.menu_import_pois -> { openPoiImportPicker(); true }
                 R.id.menu_clear_track -> { clearTrack(); true }
                 else -> false
             }
@@ -190,8 +207,52 @@ class MainActivity : Activity(), LocationListener {
             .show()
     }
 
+    private fun findPoisOnRoute(category: PoiCategory) {
+        val gpx = activeGpx
+        if (gpx == null) {
+            Toast.makeText(this, R.string.no_track_loaded, Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (poiDb.count() == 0L) {
+            Toast.makeText(this, R.string.no_pois_data, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val results = PoiSearch(poiDb).findAlongRoute(gpx, category)
+        if (results.isEmpty()) {
+            Toast.makeText(this,
+                getString(R.string.no_pois_found, category.label), Toast.LENGTH_SHORT).show()
+            poiOverlay?.clear()
+            return
+        }
+        poiOverlay?.show(results.map { it.poi })
+        Toast.makeText(this,
+            getString(R.string.pois_found, results.size, category.label), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun openPoiImportPicker() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+        }
+        startActivityForResult(intent, REQ_IMPORT_POI)
+    }
+
+    private fun importPois(uri: Uri) {
+        try {
+            val result = contentResolver.openInputStream(uri)?.use {
+                PoiImporter.importJson(it, poiDb)
+            } ?: return
+            Toast.makeText(this,
+                getString(R.string.pois_imported, result.imported, result.skipped),
+                Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "POI import failed: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun clearTrack() {
         trackOverlay?.clear()
+        poiOverlay?.clear()
         activeGpx = null
         trackFollower = null
         navRow.visibility = View.GONE
@@ -273,6 +334,7 @@ class MainActivity : Activity(), LocationListener {
         when (requestCode) {
             REQ_OPEN_GPX -> loadGpx(uri)
             REQ_SAVE_GPX -> exportGpx(uri)
+            REQ_IMPORT_POI -> importPois(uri)
         }
     }
 
@@ -379,6 +441,7 @@ class MainActivity : Activity(), LocationListener {
         super.onDestroy()
         mapView.onDestroy()
         favoritesDb.close()
+        poiDb.close()
     }
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
@@ -390,6 +453,7 @@ class MainActivity : Activity(), LocationListener {
         private const val REQ_LOCATION = 1
         private const val REQ_OPEN_GPX = 2
         private const val REQ_SAVE_GPX = 3
+        private const val REQ_IMPORT_POI = 4
         private const val RELOCK_RIDING_MS = 5_000L
         private const val RELOCK_IDLE_MS = 15_000L
     }

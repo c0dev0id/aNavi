@@ -7,11 +7,23 @@
         android:id="@+id/menu_save_gpx"
         android:title="@string/menu_save_gpx" />
     <item
+        android:id="@+id/menu_find_fuel"
+        android:title="@string/menu_find_fuel" />
+    <item
+        android:id="@+id/menu_find_food"
+        android:title="@string/menu_find_food" />
+    <item
+        android:id="@+id/menu_find_lodging"
+        android:title="@string/menu_find_lodging" />
+    <item
         android:id="@+id/menu_save_location"
         android:title="@string/menu_save_location" />
     <item
         android:id="@+id/menu_favorites"
         android:title="@string/menu_favorites" />
+    <item
+        android:id="@+id/menu_import_pois"
+        android:title="@string/menu_import_pois" />
     <item
         android:id="@+id/menu_clear_track"
         android:title="@string/menu_clear_track" />

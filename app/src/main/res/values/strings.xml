@@ -20,4 +20,13 @@
     <string name="location_saved">Location saved</string>
     <string name="no_location">No GPS fix yet</string>
     <string name="track_cleared">Track cleared</string>
+    <string name="menu_find_fuel">Fuel on Route</string>
+    <string name="menu_find_food">Food on Route</string>
+    <string name="menu_find_lodging">Lodging on Route</string>
+    <string name="menu_import_pois">Import POIs</string>
+    <string name="no_track_loaded">Load a GPX track first</string>
+    <string name="no_pois_found">No %s found on route</string>
+    <string name="pois_found">%d %s found on route</string>
+    <string name="pois_imported">Imported %d POIs (%d skipped)</string>
+    <string name="no_pois_data">No POI data loaded — import POIs first</string>
 </resources>
