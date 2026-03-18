@@ -20,34 +20,84 @@
         android:scaleType="centerInside"
         android:padding="12dp" />
 
+    <TextView
+        android:id="@+id/offTrackBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="#CCFF4444"
+        android:gravity="center"
+        android:padding="8dp"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        android:fontFamily="monospace"
+        android:text="@string/off_track"
+        android:visibility="gone" />
+
     <LinearLayout
         android:id="@+id/hud"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:padding="16dp"
         android:background="#CC000000">
 
-        <TextView
-            android:id="@+id/speedText"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="@android:color/white"
-            android:textSize="28sp"
-            android:fontFamily="monospace"
-            android:text="-- km/h" />
+            android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/distanceText"
-            android:layout_width="0dp"
+            <TextView
+                android:id="@+id/speedText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@android:color/white"
+                android:textSize="28sp"
+                android:fontFamily="monospace"
+                android:text="-- km/h" />
+
+            <TextView
+                android:id="@+id/distanceText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@android:color/white"
+                android:textSize="28sp"
+                android:fontFamily="monospace"
+                android:gravity="end"
+                android:text="-- km" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navRow"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="@android:color/white"
-            android:textSize="28sp"
-            android:fontFamily="monospace"
-            android:gravity="end"
-            android:text="-- km" />
+            android:orientation="horizontal"
+            android:paddingTop="4dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/etaText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="#AAFFFFFF"
+                android:textSize="20sp"
+                android:fontFamily="monospace"
+                android:text="ETA --:--" />
+
+            <TextView
+                android:id="@+id/remainText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="#AAFFFFFF"
+                android:textSize="20sp"
+                android:fontFamily="monospace"
+                android:gravity="end"
+                android:text="-- km left" />
+        </LinearLayout>
     </LinearLayout>
 </FrameLayout>

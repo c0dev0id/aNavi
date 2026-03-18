@@ -9,18 +9,22 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import dev.anavi.gpx.GpxData
 import dev.anavi.gpx.GpxParser
 import dev.anavi.gpx.GpxWriter
 import dev.anavi.map.TrackOverlay
+import dev.anavi.nav.TrackFollower
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
+import java.util.Locale
 
 class MainActivity : Activity(), LocationListener {
 
@@ -28,6 +32,10 @@ class MainActivity : Activity(), LocationListener {
     private var map: MapLibreMap? = null
     private lateinit var speedText: TextView
     private lateinit var distanceText: TextView
+    private lateinit var etaText: TextView
+    private lateinit var remainText: TextView
+    private lateinit var navRow: LinearLayout
+    private lateinit var offTrackBanner: TextView
     private lateinit var cameraToggle: ImageButton
     private var locationManager: LocationManager? = null
 
@@ -36,6 +44,7 @@ class MainActivity : Activity(), LocationListener {
 
     private var trackOverlay: TrackOverlay? = null
     private var activeGpx: GpxData? = null
+    private var trackFollower: TrackFollower? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,6 +52,10 @@ class MainActivity : Activity(), LocationListener {
 
         speedText = findViewById(R.id.speedText)
         distanceText = findViewById(R.id.distanceText)
+        etaText = findViewById(R.id.etaText)
+        remainText = findViewById(R.id.remainText)
+        navRow = findViewById(R.id.navRow)
+        offTrackBanner = findViewById(R.id.offTrackBanner)
         cameraToggle = findViewById(R.id.cameraToggle)
 
         cameraToggle.setOnClickListener {
@@ -61,7 +74,6 @@ class MainActivity : Activity(), LocationListener {
             }
             mlMap.setStyle(styleUrl) {
                 trackOverlay = TrackOverlay(mlMap)
-                // If a GPX was loaded before the style was ready, show it now
                 activeGpx?.let { showTrack(it) }
             }
             mlMap.cameraPosition = CameraPosition.Builder()
@@ -110,6 +122,13 @@ class MainActivity : Activity(), LocationListener {
         try {
             val gpx = contentResolver.openInputStream(uri)?.use { GpxParser.parse(it) } ?: return
             activeGpx = gpx
+            trackFollower = if (gpx.allTrackPoints().size >= 2) {
+                navRow.visibility = View.VISIBLE
+                TrackFollower(gpx)
+            } else {
+                navRow.visibility = View.GONE
+                null
+            }
             showTrack(gpx)
         } catch (e: Exception) {
             Toast.makeText(this, "Failed to load GPX: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -119,7 +138,6 @@ class MainActivity : Activity(), LocationListener {
     private fun showTrack(gpx: GpxData) {
         val overlay = trackOverlay ?: return
         overlay.show(gpx)
-        // Zoom to fit the track
         overlay.bounds(gpx)?.let { bounds ->
             map?.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 64))
         }
@@ -188,7 +206,40 @@ class MainActivity : Activity(), LocationListener {
     override fun onLocationChanged(location: Location) {
         val kmh = (location.speed * 3.6).toInt()
         speedText.text = getString(R.string.speed_format, kmh)
+        updateNavigation(location, kmh)
         updateCamera(location)
+    }
+
+    private fun updateNavigation(location: Location, kmh: Int) {
+        val follower = trackFollower ?: return
+        val state = follower.update(location.latitude, location.longitude)
+
+        // Off-track banner
+        offTrackBanner.visibility = if (state.offTrack) View.VISIBLE else View.GONE
+
+        // Remaining distance
+        val remainM = state.distanceRemainingM
+        remainText.text = if (remainM >= 1000) {
+            getString(R.string.remain_km_format, remainM / 1000.0)
+        } else {
+            getString(R.string.remain_m_format, remainM.toInt())
+        }
+
+        // ETA based on current speed
+        if (kmh > 3) {
+            val remainH = remainM / 1000.0 / kmh
+            val totalMin = (remainH * 60).toInt()
+            val h = totalMin / 60
+            val m = totalMin % 60
+            etaText.text = getString(R.string.eta_format,
+                String.format(Locale.ROOT, "%d:%02d", h, m))
+        } else {
+            etaText.text = getString(R.string.eta_format, "--:--")
+        }
+
+        // Total distance covered on the distanceText field
+        val coveredKm = state.distanceCoveredM / 1000.0
+        distanceText.text = String.format(Locale.ROOT, "%.1f km", coveredKm)
     }
 
     private fun updateCamera(location: Location) {

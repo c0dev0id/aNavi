@@ -3,4 +3,8 @@
     <string name="app_name">aNavi</string>
     <string name="speed_format">%d km/h</string>
     <string name="camera_toggle">Toggle camera lock</string>
+    <string name="off_track">OFF TRACK</string>
+    <string name="eta_format">ETA %s</string>
+    <string name="remain_km_format">%.1f km left</string>
+    <string name="remain_m_format">%d m left</string>
 </resources>
