@@ -75,6 +75,7 @@ class MainActivity : Activity(), LocationListener {
     private lateinit var crosshair: Crosshair
     private lateinit var ring: Ring
     private lateinit var updaterCard: UpdaterCard
+    private lateinit var appButton: IconButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -140,6 +141,7 @@ class MainActivity : Activity(), LocationListener {
 
         val versionName = packageManager.getPackageInfo(packageName, 0).versionName ?: "dev"
         val hud = findViewById<LinearLayout>(R.id.hud)
+
         updaterCard = UpdaterCard(this).apply {
             text = "v$versionName"
             layoutParams = FrameLayout.LayoutParams(
@@ -149,12 +151,33 @@ class MainActivity : Activity(), LocationListener {
             ).apply { rightMargin = margin }
         }
         root.addView(updaterCard)
+
+        appButton = IconButton(this).apply {
+            setIcon(android.R.drawable.ic_menu_manage)
+            setOnClickListener { showAppMenu(it) }
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM or Gravity.END
+            ).apply { rightMargin = margin }
+        }
+        root.addView(appButton)
+
         hud.viewTreeObserver.addOnGlobalLayoutListener {
-            val params = updaterCard.layoutParams as FrameLayout.LayoutParams
-            val target = hud.height + margin
-            if (params.bottomMargin != target) {
-                params.bottomMargin = target
-                updaterCard.layoutParams = params
+            val hudH = hud.height
+            val cardParams = updaterCard.layoutParams as FrameLayout.LayoutParams
+            val cardBottom = hudH + margin
+            if (cardParams.bottomMargin != cardBottom) {
+                cardParams.bottomMargin = cardBottom
+                updaterCard.layoutParams = cardParams
+            }
+            updaterCard.post {
+                val btnParams = appButton.layoutParams as FrameLayout.LayoutParams
+                val btnBottom = cardBottom + updaterCard.height + margin / 2
+                if (btnParams.bottomMargin != btnBottom) {
+                    btnParams.bottomMargin = btnBottom
+                    appButton.layoutParams = btnParams
+                }
             }
         }
 
@@ -230,6 +253,38 @@ class MainActivity : Activity(), LocationListener {
             expandH = ExpandH.RIGHT,
             expandV = ExpandV.DOWN,
             title = getString(R.string.app_name),
+            items = items,
+            onDismiss = { activeMenu = null }
+        )
+    }
+
+    private fun showAppMenu(anchor: View) {
+        activeMenu?.dismiss()
+
+        val launchIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        val apps = packageManager.queryIntentActivities(launchIntent, PackageManager.MATCH_ALL)
+            .filter { it.activityInfo.packageName != packageName }
+            .sortedBy { it.loadLabel(packageManager).toString().lowercase(Locale.ROOT) }
+            .take(10)
+
+        val items = apps.map { resolveInfo ->
+            val label = resolveInfo.loadLabel(packageManager).toString()
+            MenuItem(label) {
+                val intent = packageManager.getLaunchIntentForPackage(resolveInfo.activityInfo.packageName)
+                if (intent != null) startActivity(intent)
+            }
+        }
+
+        val menu = Menu(this)
+        activeMenu = menu
+        menu.show(
+            parent = mapView.parent as FrameLayout,
+            anchor = anchor,
+            expandH = ExpandH.LEFT,
+            expandV = ExpandV.UP,
+            title = "Apps",
             items = items,
             onDismiss = { activeMenu = null }
         )
