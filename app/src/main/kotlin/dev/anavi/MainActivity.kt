@@ -67,8 +67,9 @@ class MainActivity : Activity(), LocationListener {
         mapView.onCreate(savedInstanceState)
         mapView.getMapAsync { mlMap ->
             map = mlMap
-            val styleUrl = if (BuildConfig.MAPTILER_KEY.isNotEmpty()) {
-                "https://api.maptiler.com/maps/streets-v2/style.json?key=${BuildConfig.MAPTILER_KEY}"
+            val maptilerKey = getString(R.string.maptiler_key)
+            val styleUrl = if (maptilerKey.isNotEmpty()) {
+                "https://api.maptiler.com/maps/streets-v2/style.json?key=$maptilerKey"
             } else {
                 "https://demotiles.maplibre.org/style.json"
             }

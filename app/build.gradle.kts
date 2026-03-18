@@ -17,12 +17,8 @@ android {
         versionCode = 1
         versionName = "0.1.0"
 
-        buildConfigField("String", "MAPTILER_KEY", "\"${envOrProp("MAPTILER_KEY")}\"")
-        buildConfigField("String", "GOOGLE_STT_KEY", "\"${envOrProp("GOOGLE_STT_KEY")}\"")
-    }
-
-    buildFeatures {
-        buildConfig = true
+        resValue("string", "maptiler_key", envOrProp("MAPTILER_KEY"))
+        resValue("string", "google_stt_key", envOrProp("GOOGLE_STT_KEY"))
     }
 
     signingConfigs {

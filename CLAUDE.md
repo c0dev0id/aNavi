@@ -54,4 +54,4 @@ Required GitHub Secrets:
 - `MAPTILER_KEY` — MapTiler API key (map tiles/styles)
 - `GOOGLE_STT_KEY` — Google Speech-to-Text key (voice commands)
 
-API keys are injected via `BuildConfig.MAPTILER_KEY` / `BuildConfig.GOOGLE_STT_KEY`. For local dev, set them as environment variables or in `gradle.properties`.
+API keys are injected via `resValue` as string resources (`R.string.maptiler_key` / `R.string.google_stt_key`). For local dev, set them as environment variables or in `gradle.properties`.
