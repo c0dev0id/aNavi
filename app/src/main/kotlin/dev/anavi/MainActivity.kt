@@ -16,10 +16,13 @@ import android.widget.EditText
 import android.view.Gravity
 import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.PopupMenu
+import dev.anavi.ui.ExpandH
+import dev.anavi.ui.ExpandV
+import dev.anavi.ui.Menu
 import android.widget.TextView
 import android.widget.Toast
 import dev.anavi.ui.IconButton
+import dev.anavi.ui.MenuItem
 import dev.anavi.ui.UiMetrics
 import dev.anavi.db.FavoriteLocation
 import dev.anavi.db.FavoritesDb
@@ -65,6 +68,7 @@ class MainActivity : Activity(), LocationListener {
     private lateinit var favoritesDb: FavoritesDb
     private lateinit var poiDb: PoiDb
     private var poiOverlay: PoiOverlay? = null
+    private var activeMenu: Menu? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -159,29 +163,32 @@ class MainActivity : Activity(), LocationListener {
     // -- Menu --
 
     private fun showMenu(anchor: View) {
-        val popup = PopupMenu(this, anchor)
-        popup.menuInflater.inflate(R.menu.main_menu, popup.menu)
+        activeMenu?.dismiss()
+
         val hasTrack = activeGpx != null
-        popup.menu.findItem(R.id.menu_save_gpx)?.isEnabled = hasTrack
-        popup.menu.findItem(R.id.menu_clear_track)?.isEnabled = hasTrack
-        popup.menu.findItem(R.id.menu_find_fuel)?.isEnabled = hasTrack
-        popup.menu.findItem(R.id.menu_find_food)?.isEnabled = hasTrack
-        popup.menu.findItem(R.id.menu_find_lodging)?.isEnabled = hasTrack
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.menu_open_gpx -> { openGpxPicker(); true }
-                R.id.menu_save_gpx -> { saveGpxPicker(); true }
-                R.id.menu_find_fuel -> { findPoisOnRoute(PoiCategory.FUEL); true }
-                R.id.menu_find_food -> { findPoisOnRoute(PoiCategory.FOOD); true }
-                R.id.menu_find_lodging -> { findPoisOnRoute(PoiCategory.LODGING); true }
-                R.id.menu_save_location -> { showSaveLocationDialog(); true }
-                R.id.menu_favorites -> { showFavoritesList(); true }
-                R.id.menu_import_pois -> { openPoiImportPicker(); true }
-                R.id.menu_clear_track -> { clearTrack(); true }
-                else -> false
-            }
-        }
-        popup.show()
+        val items = listOf(
+            MenuItem(getString(R.string.menu_open_gpx)) { openGpxPicker() },
+            MenuItem(getString(R.string.menu_save_gpx), enabled = hasTrack) { saveGpxPicker() },
+            MenuItem(getString(R.string.menu_find_fuel), enabled = hasTrack) { findPoisOnRoute(PoiCategory.FUEL) },
+            MenuItem(getString(R.string.menu_find_food), enabled = hasTrack) { findPoisOnRoute(PoiCategory.FOOD) },
+            MenuItem(getString(R.string.menu_find_lodging), enabled = hasTrack) { findPoisOnRoute(PoiCategory.LODGING) },
+            MenuItem(getString(R.string.menu_save_location)) { showSaveLocationDialog() },
+            MenuItem(getString(R.string.menu_favorites)) { showFavoritesList() },
+            MenuItem(getString(R.string.menu_import_pois)) { openPoiImportPicker() },
+            MenuItem(getString(R.string.menu_clear_track), enabled = hasTrack) { clearTrack() }
+        )
+
+        val menu = Menu(this)
+        activeMenu = menu
+        menu.show(
+            parent = mapView.parent as FrameLayout,
+            anchor = anchor,
+            expandH = ExpandH.RIGHT,
+            expandV = ExpandV.DOWN,
+            title = getString(R.string.app_name),
+            items = items,
+            onDismiss = { activeMenu = null }
+        )
     }
 
     private fun showSaveLocationDialog() {
