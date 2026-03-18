@@ -7,4 +7,17 @@
     <string name="eta_format">ETA %s</string>
     <string name="remain_km_format">%.1f km left</string>
     <string name="remain_m_format">%d m left</string>
+    <string name="menu">Menu</string>
+    <string name="menu_open_gpx">Open GPX</string>
+    <string name="menu_save_gpx">Export GPX</string>
+    <string name="menu_save_location">Save Location</string>
+    <string name="menu_favorites">Favorites</string>
+    <string name="menu_clear_track">Clear Track</string>
+    <string name="save_location_title">Save Location</string>
+    <string name="save_location_hint">Location name</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="location_saved">Location saved</string>
+    <string name="no_location">No GPS fix yet</string>
+    <string name="track_cleared">Track cleared</string>
 </resources>

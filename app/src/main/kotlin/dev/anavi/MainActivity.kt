@@ -2,6 +2,7 @@ package dev.anavi
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
@@ -10,10 +11,15 @@ import android.location.LocationManager
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.widget.ArrayAdapter
+import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.LinearLayout
+import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
+import dev.anavi.db.FavoriteLocation
+import dev.anavi.db.FavoritesDb
 import dev.anavi.gpx.GpxData
 import dev.anavi.gpx.GpxParser
 import dev.anavi.gpx.GpxWriter
@@ -41,14 +47,19 @@ class MainActivity : Activity(), LocationListener {
 
     private var cameraLocked = true
     private var lastUserInteraction = 0L
+    private var lastLocation: Location? = null
 
     private var trackOverlay: TrackOverlay? = null
     private var activeGpx: GpxData? = null
     private var trackFollower: TrackFollower? = null
 
+    private lateinit var favoritesDb: FavoritesDb
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        favoritesDb = FavoritesDb(this)
 
         speedText = findViewById(R.id.speedText)
         distanceText = findViewById(R.id.distanceText)
@@ -62,6 +73,8 @@ class MainActivity : Activity(), LocationListener {
             cameraLocked = !cameraLocked
             updateToggleAppearance()
         }
+
+        findViewById<ImageButton>(R.id.menuButton).setOnClickListener { showMenu(it) }
 
         mapView = findViewById(R.id.mapView)
         mapView.onCreate(savedInstanceState)
@@ -109,6 +122,86 @@ class MainActivity : Activity(), LocationListener {
         handleGpxIntent(intent)
     }
 
+    // -- Menu --
+
+    private fun showMenu(anchor: View) {
+        val popup = PopupMenu(this, anchor)
+        popup.menuInflater.inflate(R.menu.main_menu, popup.menu)
+        popup.menu.findItem(R.id.menu_save_gpx)?.isEnabled = activeGpx != null
+        popup.menu.findItem(R.id.menu_clear_track)?.isEnabled = activeGpx != null
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.menu_open_gpx -> { openGpxPicker(); true }
+                R.id.menu_save_gpx -> { saveGpxPicker(); true }
+                R.id.menu_save_location -> { showSaveLocationDialog(); true }
+                R.id.menu_favorites -> { showFavoritesList(); true }
+                R.id.menu_clear_track -> { clearTrack(); true }
+                else -> false
+            }
+        }
+        popup.show()
+    }
+
+    private fun showSaveLocationDialog() {
+        val loc = lastLocation
+        if (loc == null) {
+            Toast.makeText(this, R.string.no_location, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val input = EditText(this).apply {
+            hint = getString(R.string.save_location_hint)
+            setPadding(48, 32, 48, 32)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.save_location_title)
+            .setView(input)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val name = input.text.toString().ifBlank {
+                    String.format(Locale.ROOT, "%.4f, %.4f", loc.latitude, loc.longitude)
+                }
+                favoritesDb.saveLocation(FavoriteLocation(
+                    name = name, lat = loc.latitude, lon = loc.longitude
+                ))
+                Toast.makeText(this, R.string.location_saved, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showFavoritesList() {
+        val locations = favoritesDb.allLocations()
+        if (locations.isEmpty()) {
+            Toast.makeText(this, "No favorites saved", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val names = locations.map { it.name }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_favorites)
+            .setAdapter(ArrayAdapter(this, android.R.layout.simple_list_item_1, names)) { _, which ->
+                val fav = locations[which]
+                map?.animateCamera(
+                    CameraUpdateFactory.newLatLngZoom(LatLng(fav.lat, fav.lon), 15.0)
+                )
+                cameraLocked = false
+                lastUserInteraction = System.currentTimeMillis()
+                updateToggleAppearance()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun clearTrack() {
+        trackOverlay?.clear()
+        activeGpx = null
+        trackFollower = null
+        navRow.visibility = View.GONE
+        offTrackBanner.visibility = View.GONE
+        distanceText.text = "-- km"
+        Toast.makeText(this, R.string.track_cleared, Toast.LENGTH_SHORT).show()
+    }
+
+    // -- GPX --
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleGpxIntent(intent)
@@ -153,7 +246,7 @@ class MainActivity : Activity(), LocationListener {
         }
     }
 
-    fun openGpxPicker() {
+    private fun openGpxPicker() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "*/*"
@@ -162,7 +255,7 @@ class MainActivity : Activity(), LocationListener {
         startActivityForResult(intent, REQ_OPEN_GPX)
     }
 
-    fun saveGpxPicker() {
+    private fun saveGpxPicker() {
         if (activeGpx == null) return
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
@@ -182,6 +275,8 @@ class MainActivity : Activity(), LocationListener {
             REQ_SAVE_GPX -> exportGpx(uri)
         }
     }
+
+    // -- Location --
 
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<String>, grantResults: IntArray
@@ -205,6 +300,7 @@ class MainActivity : Activity(), LocationListener {
     }
 
     override fun onLocationChanged(location: Location) {
+        lastLocation = location
         val kmh = (location.speed * 3.6).toInt()
         speedText.text = getString(R.string.speed_format, kmh)
         updateNavigation(location, kmh)
@@ -215,10 +311,8 @@ class MainActivity : Activity(), LocationListener {
         val follower = trackFollower ?: return
         val state = follower.update(location.latitude, location.longitude)
 
-        // Off-track banner
         offTrackBanner.visibility = if (state.offTrack) View.VISIBLE else View.GONE
 
-        // Remaining distance
         val remainM = state.distanceRemainingM
         remainText.text = if (remainM >= 1000) {
             getString(R.string.remain_km_format, remainM / 1000.0)
@@ -226,7 +320,6 @@ class MainActivity : Activity(), LocationListener {
             getString(R.string.remain_m_format, remainM.toInt())
         }
 
-        // ETA based on current speed
         if (kmh > 3) {
             val remainH = remainM / 1000.0 / kmh
             val totalMin = (remainH * 60).toInt()
@@ -238,7 +331,6 @@ class MainActivity : Activity(), LocationListener {
             etaText.text = getString(R.string.eta_format, "--:--")
         }
 
-        // Total distance covered on the distanceText field
         val coveredKm = state.distanceCoveredM / 1000.0
         distanceText.text = String.format(Locale.ROOT, "%.1f km", coveredKm)
     }
@@ -247,8 +339,6 @@ class MainActivity : Activity(), LocationListener {
         val m = map ?: return
         val kmh = (location.speed * 3.6).toInt()
 
-        // Auto-relock: speed-aware timeout
-        // Riding (>20 km/h) → 5s, stationary → 15s
         if (!cameraLocked && lastUserInteraction > 0) {
             val elapsed = System.currentTimeMillis() - lastUserInteraction
             val timeout = if (kmh > 20) RELOCK_RIDING_MS else RELOCK_IDLE_MS
@@ -263,12 +353,10 @@ class MainActivity : Activity(), LocationListener {
         val pos = CameraPosition.Builder()
             .target(LatLng(location.latitude, location.longitude))
 
-        // Rotate map to heading only when moving — avoids jitter when stopped
         if (kmh > 5 && location.hasBearing()) {
             pos.bearing(location.bearing.toDouble())
         }
 
-        // Snappier at speed, smoother when slow
         val durationMs = if (kmh > 60) 300 else 600
         m.animateCamera(CameraUpdateFactory.newCameraPosition(pos.build()), durationMs)
     }
@@ -276,6 +364,8 @@ class MainActivity : Activity(), LocationListener {
     private fun updateToggleAppearance() {
         cameraToggle.alpha = if (cameraLocked) 1.0f else 0.5f
     }
+
+    // -- Lifecycle --
 
     override fun onStart() { super.onStart(); mapView.onStart() }
     override fun onResume() { super.onResume(); mapView.onResume() }
@@ -285,7 +375,11 @@ class MainActivity : Activity(), LocationListener {
         mapView.onStop()
         locationManager?.removeUpdates(this)
     }
-    override fun onDestroy() { super.onDestroy(); mapView.onDestroy() }
+    override fun onDestroy() {
+        super.onDestroy()
+        mapView.onDestroy()
+        favoritesDb.close()
+    }
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         mapView.onSaveInstanceState(outState)
