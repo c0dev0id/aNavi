@@ -25,6 +25,8 @@ import dev.anavi.ui.Crosshair
 import dev.anavi.ui.IconButton
 import dev.anavi.ui.MenuItem
 import dev.anavi.ui.Ring
+import dev.anavi.ui.SearchRing
+import dev.anavi.ui.Spoke
 import dev.anavi.ui.UiMetrics
 import dev.anavi.ui.UpdaterCard
 import dev.anavi.db.FavoriteLocation
@@ -76,6 +78,8 @@ class MainActivity : Activity(), LocationListener {
     private lateinit var ring: Ring
     private lateinit var updaterCard: UpdaterCard
     private lateinit var appButton: IconButton
+    private lateinit var searchRing: SearchRing
+    private var activePoiCategory: PoiCategory? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -181,6 +185,32 @@ class MainActivity : Activity(), LocationListener {
             }
         }
 
+        val poiButton = IconButton(this).apply {
+            setIcon(android.R.drawable.ic_menu_mapmode)
+            setOnClickListener { showPoiMenu(it) }
+        }
+        val leftSpoke = Spoke(this, Gravity.LEFT, listOf(poiButton))
+        val rightSpoke = Spoke(this, Gravity.RIGHT, emptyList())
+        searchRing = SearchRing(this).apply {
+            setIcon(android.R.drawable.ic_menu_search)
+            setSpokes(leftSpoke, rightSpoke)
+            setOnClickListener { toggle() }
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            ).apply { bottomMargin = margin }
+        }
+        root.addView(searchRing)
+        hud.viewTreeObserver.addOnGlobalLayoutListener {
+            val ringParams = searchRing.layoutParams as FrameLayout.LayoutParams
+            val ringBottom = hud.height + margin
+            if (ringParams.bottomMargin != ringBottom) {
+                ringParams.bottomMargin = ringBottom
+                searchRing.layoutParams = ringParams
+            }
+        }
+
         mapView.onCreate(savedInstanceState)
         mapView.getMapAsync { mlMap ->
             map = mlMap
@@ -253,6 +283,39 @@ class MainActivity : Activity(), LocationListener {
             expandH = ExpandH.RIGHT,
             expandV = ExpandV.DOWN,
             title = getString(R.string.app_name),
+            items = items,
+            onDismiss = { activeMenu = null }
+        )
+    }
+
+    private fun showPoiMenu(anchor: View) {
+        activeMenu?.dismiss()
+
+        val hasTrack = activeGpx != null
+        val items = PoiCategory.entries.map { cat ->
+            MenuItem(
+                label = cat.label,
+                enabled = hasTrack,
+                checked = activePoiCategory == cat
+            ) {
+                if (activePoiCategory == cat) {
+                    activePoiCategory = null
+                    poiOverlay?.clear()
+                } else {
+                    activePoiCategory = cat
+                    findPoisOnRoute(cat)
+                }
+            }
+        }
+
+        val menu = Menu(this)
+        activeMenu = menu
+        menu.show(
+            parent = mapView.parent as FrameLayout,
+            anchor = anchor,
+            expandH = ExpandH.LEFT,
+            expandV = ExpandV.UP,
+            title = "POI",
             items = items,
             onDismiss = { activeMenu = null }
         )
@@ -425,6 +488,7 @@ class MainActivity : Activity(), LocationListener {
         poiOverlay?.clear()
         activeGpx = null
         trackFollower = null
+        activePoiCategory = null
         navRow.visibility = View.GONE
         offTrackBanner.visibility = View.GONE
         distanceText.text = "-- km"
