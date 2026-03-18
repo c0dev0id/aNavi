@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">aNavi</string>
+    <string name="speed_format">%d km/h</string>
+    <string name="camera_toggle">Toggle camera lock</string>
+</resources>
