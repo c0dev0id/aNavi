@@ -29,7 +29,7 @@ gradle assembleRelease        # Signed release (needs keystore, see CI)
 | UI | Views + custom HUD overlay | Zero abstraction tax; no Compose overhead |
 | Theme | `Theme.DeviceDefault.NoActionBar` | Platform theme, no AppCompat needed at API 34+ |
 | DI | Manual construction | ~5 services total; no framework warranted |
-| POI search (planned) | SQLite FTS5 | Built into Android, sub-ms prefix search |
+| POI search | SQLite FTS5 | Built into Android, sub-ms prefix search |
 | Routing (planned) | GraphHopper embedded | On-device motorcycle profile support |
 
 ## Architecture
@@ -52,6 +52,5 @@ Required GitHub Secrets:
 - `SIGNING_KEYSTORE_BASE64` — base64-encoded release keystore
 - `SIGNING_KEYSTORE_PASSWORD`, `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`
 - `MAPTILER_KEY` — MapTiler API key (map tiles/styles)
-- `GOOGLE_STT_KEY` — Google Speech-to-Text key (voice commands)
 
-API keys are injected via `resValue` as string resources (`R.string.maptiler_key` / `R.string.google_stt_key`). For local dev, set them as environment variables or in `gradle.properties`.
+API keys are injected via `resValue` as string resources (`R.string.maptiler_key`). For local dev, set as environment variables or in `gradle.properties`.

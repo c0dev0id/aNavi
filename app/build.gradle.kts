@@ -18,7 +18,6 @@ android {
         versionName = "0.1.0"
 
         resValue("string", "maptiler_key", envOrProp("MAPTILER_KEY"))
-        resValue("string", "google_stt_key", envOrProp("GOOGLE_STT_KEY"))
     }
 
     signingConfigs {

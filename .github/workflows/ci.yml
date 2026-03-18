@@ -57,7 +57,6 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
           MAPTILER_KEY: ${{ secrets.MAPTILER_KEY }}
-          GOOGLE_STT_KEY: ${{ secrets.GOOGLE_STT_KEY }}
         run: gradle assembleRelease
 
       - name: Create pre-release
