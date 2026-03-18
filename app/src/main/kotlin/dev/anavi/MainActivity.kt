@@ -21,6 +21,7 @@ import dev.anavi.ui.ExpandV
 import dev.anavi.ui.Menu
 import android.widget.TextView
 import android.widget.Toast
+import dev.anavi.ui.Crosshair
 import dev.anavi.ui.IconButton
 import dev.anavi.ui.MenuItem
 import dev.anavi.ui.UiMetrics
@@ -69,6 +70,7 @@ class MainActivity : Activity(), LocationListener {
     private lateinit var poiDb: PoiDb
     private var poiOverlay: PoiOverlay? = null
     private var activeMenu: Menu? = null
+    private lateinit var crosshair: Crosshair
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -113,6 +115,15 @@ class MainActivity : Activity(), LocationListener {
             ).apply { setMargins(margin, margin, margin, margin) }
         }
         root.addView(cameraToggle)
+
+        crosshair = Crosshair(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            alpha = 0f
+        }
+        root.addView(crosshair)
 
         mapView.onCreate(savedInstanceState)
         mapView.getMapAsync { mlMap ->
@@ -399,6 +410,20 @@ class MainActivity : Activity(), LocationListener {
         speedText.text = getString(R.string.speed_format, kmh)
         updateNavigation(location, kmh)
         updateCamera(location)
+        updateCrosshair(location)
+    }
+
+    private fun updateCrosshair(location: Location) {
+        val m = map ?: return
+        val puck = m.projection.toScreenLocation(
+            LatLng(location.latitude, location.longitude)
+        )
+        val cx = crosshair.width / 2f
+        val cy = crosshair.height / 2f
+        val dx = puck.x - cx
+        val dy = puck.y - cy
+        val dist = Math.sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+        crosshair.setPuckDistance(dist)
     }
 
     private fun updateNavigation(location: Location, kmh: Int) {
