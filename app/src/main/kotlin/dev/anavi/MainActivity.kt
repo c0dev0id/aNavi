@@ -26,6 +26,7 @@ import dev.anavi.ui.IconButton
 import dev.anavi.ui.MenuItem
 import dev.anavi.ui.Ring
 import dev.anavi.ui.UiMetrics
+import dev.anavi.ui.UpdaterCard
 import dev.anavi.db.FavoriteLocation
 import dev.anavi.db.FavoritesDb
 import dev.anavi.gpx.GpxData
@@ -73,6 +74,7 @@ class MainActivity : Activity(), LocationListener {
     private var activeMenu: Menu? = null
     private lateinit var crosshair: Crosshair
     private lateinit var ring: Ring
+    private lateinit var updaterCard: UpdaterCard
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -135,6 +137,26 @@ class MainActivity : Activity(), LocationListener {
             alpha = 0f
         }
         root.addView(crosshair)
+
+        val versionName = packageManager.getPackageInfo(packageName, 0).versionName ?: "dev"
+        val hud = findViewById<LinearLayout>(R.id.hud)
+        updaterCard = UpdaterCard(this).apply {
+            text = "v$versionName"
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM or Gravity.END
+            ).apply { rightMargin = margin }
+        }
+        root.addView(updaterCard)
+        hud.viewTreeObserver.addOnGlobalLayoutListener {
+            val params = updaterCard.layoutParams as FrameLayout.LayoutParams
+            val target = hud.height + margin
+            if (params.bottomMargin != target) {
+                params.bottomMargin = target
+                updaterCard.layoutParams = params
+            }
+        }
 
         mapView.onCreate(savedInstanceState)
         mapView.getMapAsync { mlMap ->
