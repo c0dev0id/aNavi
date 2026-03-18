@@ -62,4 +62,5 @@ android {
 dependencies {
     implementation(libs.maplibre.sdk)
     testImplementation(libs.junit)
+    testImplementation(libs.kxml2)
 }
