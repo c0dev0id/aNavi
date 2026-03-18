@@ -82,15 +82,15 @@ class MainActivity : Activity(), LocationListener {
                 .build()
 
             mlMap.addOnMoveListener(object : MapLibreMap.OnMoveListener {
-                override fun onMoveBegin(detector: com.mapbox.android.gestures.MoveGestureDetector) {
+                override fun onMoveBegin(detector: org.maplibre.android.gestures.MoveGestureDetector) {
                     if (cameraLocked) {
                         cameraLocked = false
                         lastUserInteraction = System.currentTimeMillis()
                         updateToggleAppearance()
                     }
                 }
-                override fun onMove(detector: com.mapbox.android.gestures.MoveGestureDetector) {}
-                override fun onMoveEnd(detector: com.mapbox.android.gestures.MoveGestureDetector) {}
+                override fun onMove(detector: org.maplibre.android.gestures.MoveGestureDetector) {}
+                override fun onMoveEnd(detector: org.maplibre.android.gestures.MoveGestureDetector) {}
             })
         }
 
