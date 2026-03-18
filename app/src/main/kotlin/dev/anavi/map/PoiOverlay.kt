@@ -4,6 +4,7 @@ import android.graphics.Color
 import dev.anavi.poi.Poi
 import dev.anavi.poi.PoiCategory
 import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.layers.SymbolLayer
@@ -33,13 +34,12 @@ class PoiOverlay(private val map: MapLibreMap) {
                 CircleLayer(CIRCLE_LAYER_ID, SOURCE_ID).withProperties(
                     PropertyFactory.circleRadius(8f),
                     PropertyFactory.circleColor(
-                        arrayOf(
-                            "match",
-                            arrayOf("get", "category"),
-                            "FUEL", Color.parseColor("#FF9800"),
-                            "FOOD", Color.parseColor("#4CAF50"),
-                            "LODGING", Color.parseColor("#2196F3"),
-                            Color.parseColor("#9E9E9E"),
+                        Expression.match(
+                            Expression.get("category"),
+                            Expression.color(Color.parseColor("#9E9E9E")),
+                            Expression.stop("FUEL", Expression.color(Color.parseColor("#FF9800"))),
+                            Expression.stop("FOOD", Expression.color(Color.parseColor("#4CAF50"))),
+                            Expression.stop("LODGING", Expression.color(Color.parseColor("#2196F3"))),
                         )
                     ),
                     PropertyFactory.circleStrokeWidth(2f),
@@ -48,7 +48,7 @@ class PoiOverlay(private val map: MapLibreMap) {
             )
             style.addLayer(
                 SymbolLayer(LABEL_LAYER_ID, SOURCE_ID).withProperties(
-                    PropertyFactory.textField(arrayOf("get", "name")),
+                    PropertyFactory.textField(Expression.get("name")),
                     PropertyFactory.textSize(11f),
                     PropertyFactory.textOffset(arrayOf(0f, 1.5f)),
                     PropertyFactory.textColor(Color.WHITE),

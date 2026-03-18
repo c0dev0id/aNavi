@@ -26,7 +26,7 @@
     <string name="menu_import_pois">Import POIs</string>
     <string name="no_track_loaded">Load a GPX track first</string>
     <string name="no_pois_found">No %s found on route</string>
-    <string name="pois_found">%d %s found on route</string>
-    <string name="pois_imported">Imported %d POIs (%d skipped)</string>
+    <string name="pois_found">%1$d %2$s found on route</string>
+    <string name="pois_imported">Imported %1$d POIs (%2$d skipped)</string>
     <string name="no_pois_data">No POI data loaded — import POIs first</string>
 </resources>
