@@ -13,11 +13,14 @@ import android.os.Bundle
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.EditText
-import android.widget.ImageButton
+import android.view.Gravity
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
+import dev.anavi.ui.IconButton
+import dev.anavi.ui.UiMetrics
 import dev.anavi.db.FavoriteLocation
 import dev.anavi.db.FavoritesDb
 import dev.anavi.gpx.GpxData
@@ -47,7 +50,8 @@ class MainActivity : Activity(), LocationListener {
     private lateinit var remainText: TextView
     private lateinit var navRow: LinearLayout
     private lateinit var offTrackBanner: TextView
-    private lateinit var cameraToggle: ImageButton
+    private lateinit var menuButton: IconButton
+    private lateinit var cameraToggle: IconButton
     private var locationManager: LocationManager? = null
 
     private var cameraLocked = true
@@ -75,16 +79,37 @@ class MainActivity : Activity(), LocationListener {
         remainText = findViewById(R.id.remainText)
         navRow = findViewById(R.id.navRow)
         offTrackBanner = findViewById(R.id.offTrackBanner)
-        cameraToggle = findViewById(R.id.cameraToggle)
-
-        cameraToggle.setOnClickListener {
-            cameraLocked = !cameraLocked
-            updateToggleAppearance()
-        }
-
-        findViewById<ImageButton>(R.id.menuButton).setOnClickListener { showMenu(it) }
 
         mapView = findViewById(R.id.mapView)
+
+        val root = mapView.parent as FrameLayout
+        val margin = UiMetrics.dp(this, UiMetrics.MARGIN).toInt()
+
+        menuButton = IconButton(this).apply {
+            setIcon(android.R.drawable.ic_menu_more)
+            setOnClickListener { showMenu(it) }
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP or Gravity.START
+            ).apply { setMargins(margin, margin, margin, margin) }
+        }
+        root.addView(menuButton)
+
+        cameraToggle = IconButton(this).apply {
+            setIcon(android.R.drawable.ic_menu_mylocation)
+            setOnClickListener {
+                cameraLocked = !cameraLocked
+                updateToggleAppearance()
+            }
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP or Gravity.END
+            ).apply { setMargins(margin, margin, margin, margin) }
+        }
+        root.addView(cameraToggle)
+
         mapView.onCreate(savedInstanceState)
         mapView.getMapAsync { mlMap ->
             map = mlMap
